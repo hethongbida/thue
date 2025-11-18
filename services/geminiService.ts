@@ -1,7 +1,7 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 
-const API_KEY = process.env.API_KEY;
+// For Vite, environment variables exposed to the client must be prefixed with VITE_
+const API_KEY = import.meta.env.VITE_API_KEY;
 
 if (!API_KEY) {
   // A check to ensure the API key is available. 
@@ -9,7 +9,8 @@ if (!API_KEY) {
   console.warn("Gemini API key not found. AI features will be disabled.");
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY! });
+// Ensure ai is only initialized if API_KEY exists
+const ai = API_KEY ? new GoogleGenAI({ apiKey: API_KEY }) : null;
 
 const model = 'gemini-2.5-flash';
 
@@ -56,7 +57,7 @@ const invoiceSchema = {
 
 
 export const analyzeInvoiceImage = async (base64Image: string, mimeType: string) => {
-    if (!API_KEY) {
+    if (!ai) {
         throw new Error("API Key không được cấu hình. Không thể phân tích hình ảnh.");
     }
 
@@ -81,8 +82,12 @@ export const analyzeInvoiceImage = async (base64Image: string, mimeType: string)
             },
         });
         
-        const jsonText = response.text.trim();
-        const parsedJson = JSON.parse(jsonText);
+        const jsonText = response.text;
+        if (!jsonText) {
+            throw new Error("Trợ lý AI không trả về nội dung JSON hợp lệ.");
+        }
+        
+        const parsedJson = JSON.parse(jsonText.trim());
         return parsedJson;
 
     } catch (error) {
@@ -124,7 +129,7 @@ export const streamChatResponse = async (
     newMessage: string
 ) => {
     try {
-        if (!API_KEY) {
+        if (!ai) {
              throw new Error("API Key không được tìm thấy. Vui lòng cấu hình API Key trong môi trường của bạn để sử dụng Trợ lý AI.");
         }
         const chat = ai.chats.create({
